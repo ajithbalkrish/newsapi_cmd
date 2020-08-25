@@ -1,0 +1,100 @@
+@charset "utf-8";  
+  
+/* CSS Document */  
+.h1 {  
+    color: white;  
+    padding: 3px;  
+}  
+  
+.h2 {  
+    color: rgb(161, 161, 149);  
+}  
+  
+.p {  
+    color: rgb(8, 8, 8);  
+}  
+
+/*
+.body {  
+    background-image: url(bg.jpg);  
+}  
+*/
+
+.wrapper {  
+    width: 880px;  
+    height: auto;  
+    overflow: hidden;  
+    margin: 30px auto 30px auto;  
+    position: relative;  
+}  
+
+.header {  
+    width: auto;  
+    height: 40px; 
+    margin: 15px 2px 0px 2px;
+    background-color: rgb(122, 122, 59);
+    text-align: center; 
+}  
+  
+.mainbody {  
+    width: 880px;  
+    height: auto;  
+    margin: 2px 2px 0px 2px;  
+    border-radius: 10px;  
+    background-color: #fff;  
+}  
+
+.mainbody-center {  
+    width: auto;  
+    height: auto;  
+    border-radius: 10px;  
+    margin: 10px 10px 0px 10px;  
+    float: left;  
+}  
+
+.wrapper {  
+    width: 880px;  
+    height: auto;  
+    overflow: hidden;  
+}  
+
+  
+.footer {  
+    width: 880px;  
+    height: auto;  
+    /*margin: 15px 2px 0px 2px;*/
+    margin: 30px auto 30px auto;  
+    background-color: rgb(122, 122, 59);
+    position: relative;    
+}  
+  
+.footer p {  
+    color: white;  
+    margin: 15px 2px 0px 2px;
+    padding: 3px; 
+    text-align: center;  
+} 
+
+.dataframe {
+    font-size: 11pt; 
+    font-family: Arial;
+    border-collapse: collapse; 
+    border: 1px solid silver;
+
+}
+
+.dataframe th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: rgb(161, 161, 149);
+    color: white;
+}
+
+.dataframe td {
+    padding: 5px;
+}
+
+.dataframe tr:nth-child(even) {
+    background: #E0E0E0;
+}
