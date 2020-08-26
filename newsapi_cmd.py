@@ -29,7 +29,8 @@ def top_headlines(args):
         with open(args[0], 'r') as file:
             params = yaml.safe_load(file)
         news = nw.NewsApiWrapper(os.getenv("NEWSAPI_KEY"), os.getenv("RESULTS_PATH"))
-        news.get_top_headlines_html(**params)
+        html_path = news.get_top_headlines_html(**params)
+        print('Results saved in {}'.format(html_path) )
     except Exception as e:
         print(e)
         

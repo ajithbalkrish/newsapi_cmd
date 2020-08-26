@@ -125,6 +125,7 @@ class NewsApiWrapper:
             with open(path, "w") as file:
                 file.write(html_template.format(query=query_string,
                                                 result=table))
+            return path                                    
         except Exception as e:
             return str(e)
 
@@ -135,49 +136,6 @@ class NewsApiWrapper:
             status = result['status']
             if status != 'ok':
                 raise Exception("ERROR: Not OK status from News API {}".format(api_name))
-
-    def _query(self, api_name, persist=True, **query_args):
-        # Get query name and append it with timestamp to use it as html/json filename
-        query_name = query_args.pop('query_name')
-        now = datetime.now()
-        time = now.strftime("%m_%d_%Y-%H_%M_%S")
-        query_name = query_name + '-{}'.format(time)
-        # Add page size, language to query args
-        pgsize = self._pgsize        
-        query_args.update(language='en')
-        query_args.update(page_size=pgsize)
-        # Call corresponding News API 
-        #results = self._newsapi.get_top_headlines(**query_args)
-        results = self._newsapi_calls[api_name](**query_args)
-        # Validate results
-        self._validate_response(results, api_name)       
-        status = results.pop('status','')
-        total_results = results.pop('totalResults', 0)
-        # if total results are more than pgsize, repeat query to get
-        # all results
-        if total_results > pgsize:
-            if total_results%pgsize != 0:
-                total = total_results + (pgsize - (total_results%pgsize))
-            remaining = total//pgsize - 1
-            for count in range(remaining):
-                pg = count+2
-                #next_pg = self._newsapi.get_top_headlines(page=pg, **query_args)
-                next_pg = self._newsapi_calls[api_name](page=pg, **query_args)
-                self._validate_response(next_pg, api_name)
-                results['articles'] += next_pg['articles']
-        # Add query name and date to results to save
-        query_args.update(query_name=query_name)
-        now = date.today()
-        query_args.update(Date=now.strftime("%m-%d-%Y"))
-        query_args.pop('page_size',0)
-        results.update(query=query_args)
-        ## Add query status to results to save
-        results.update(query_status={'status':status, 'totalResults':total_results})
-        if persist:
-            self._persist_query_response_blob(results, query_name)
-        article_df = self._create_df_from_article_list(results['articles'])
-        self._save_query_response_html(article_df, results['query'], query_name)        
-        return results, article_df,  
 
     def _validate_top_headlines_args(self, **args):
         to_remove = []
@@ -207,6 +165,43 @@ class NewsApiWrapper:
     #
     # Public methods
     #    
+    def query(self, api_name, queryname, persist=True, **query_args):
+        print (queryname)
+        # Add page size, language to query args
+        pgsize = self._pgsize        
+        query_args.update(language='en')
+        query_args.update(page_size=pgsize)
+        # Call corresponding News API 
+        #results = self._newsapi.get_top_headlines(**query_args)
+        results = self._newsapi_calls[api_name](**query_args)
+        # Validate results
+        self._validate_response(results, api_name)       
+        status = results.pop('status','')
+        total_results = results.pop('totalResults', 0)
+        # if total results are more than pgsize, repeat query to get
+        # all results
+        if total_results > pgsize:
+            if total_results%pgsize != 0:
+                total = total_results + (pgsize - (total_results%pgsize))
+            remaining = total//pgsize - 1
+            for count in range(remaining):
+                pg = count+2
+                #next_pg = self._newsapi.get_top_headlines(page=pg, **query_args)
+                next_pg = self._newsapi_calls[api_name](page=pg, **query_args)
+                self._validate_response(next_pg, api_name)
+                results['articles'] += next_pg['articles']
+        # Add query name and date to results to save
+        query_args.update(query_name=queryname)
+        now = date.today()
+        query_args.update(Date=now.strftime("%m-%d-%Y"))
+        query_args.pop('page_size',0)
+        results.update(query=query_args)
+        ## Add query status to results to save
+        results.update(query_status={'status':status, 'totalResults':total_results})
+        if persist:
+            self._persist_query_response_blob(results, queryname)
+        return results  
+
     def get_top_headlines_html(self, **query_args):
         """Get top headlines by calling newsapi get_top_headlines with provided arguments.
         Keyword arguments:
@@ -233,22 +228,17 @@ class NewsApiWrapper:
 
         Response:
             Saves results under <results_dir> with name query_name-<timestamp>.html". 
-            Also returns the dataframe containing result
         """
         try:
             args = self._validate_top_headlines_args(**query_args)
-            self._query('get_top_headlines', **args)
+            # Get query name and append it with timestamp to use it as html/json filename
+            queryname = args.pop('query_name')
+            now = datetime.now()
+            time = now.strftime("%m_%d_%Y-%H_%M_%S")
+            queryname = queryname + '-{}'.format(time)
+            # Call get_top_headlines with provided query args
+            results = self.query('get_top_headlines', queryname, **args)
+            article_df = self._create_df_from_article_list(results['articles'])
+            return self._save_query_response_html(article_df, results['query'], queryname)
         except Exception as e:
             print(e)
-
-def main():
-    RESULTS_PATH = "/Volumes/Data-2/Data Science/Projects/newsapi/Results/"
-    try:
-        news = NewsApiWrapper('d8d4416f2cc543f08186ea5b07f352c3', RESULTS_PATH)
-        news.get_top_headlines_html(category='general', country='in', query_name='in_gen')
-    except Exception as e:
-        print(e)
-
-if __name__ == "__main__":
-    # execute only if run as a script
-    main()
