@@ -18,18 +18,8 @@ def write_env(args):
     except Exception as e:
         print(e)
 
-# def load_env():
-#     with open('.env') as file:
-#         for line in file:
-#             if line.startswith('#') or not line.strip():
-#                 continue
-#             key, value = line.strip().split('=', 1)
-#             if str(value):
-#                 value = value.lstrip()
-#                 value = value.strip('"')
-#                 value = value.strip('\'')
-#             os.environ[key] = value  
-#     return
+def get_all_news(args):
+    print('get_all_news')
 
 def top_headlines(args):
     print('top_headlines')
@@ -60,9 +50,12 @@ def main():
     parser = argparse.ArgumentParser(description = "A news feed aggregator!")
 
     # defining arguments for parser object 
-    parser.add_argument("-t", "--top_headlines", type=str, nargs=1,
+    parser.add_argument("-t", "--topnews", type=str, nargs=1,
                         metavar = ('input_file'),
-                        help = "Get top headlines.")
+                        help = "Get top headlines based on the query.")
+    parser.add_argument("-a", "--allnews", type=str, nargs=1,
+                        metavar = ('input_file'),
+                        help = "Get all headlines based on the query.")
     parser.add_argument("-s", "--setup", type = str, nargs = 2,
                         metavar = ('newsapi_key','data_loc'),
                         help="newsapi_key: API key from https://newsapi.org/; data_loc: directory to save query results")
@@ -78,8 +71,12 @@ def main():
     # calling functions depending on type of argument
     if args.setup != None:
             write_env(args.setup)
-    elif args.top_headlines != None:
-            top_headlines(args.top_headlines)
+    elif args.topnews != None:
+            top_headlines(args.topnews)
+    elif args.allnews != None:
+            get_all_news(args.allnews)
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
