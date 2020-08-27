@@ -19,7 +19,7 @@ pd.set_option('display.max_rows', 100)
 TEMPLATE_PATH = "./Templates/"
 DATA_PATH = "./Data/"
 HTML_TEMPLATE = "query_result_template.html"
-PAGE_SIZE = 10
+PAGE_SIZE = 100
 
 class NewsApiWrapper:
     #
@@ -269,7 +269,7 @@ class NewsApiWrapper:
                     Alternatively you can use the AND / OR / NOT keywords, and optionally group these 
                     with parenthesis. Eg: crypto AND (ethereum OR litecoin) NOT bitcoin.
                 The complete value for q must be URL-encoded.
-            qInTitle:
+            qintitle:
                 Keywords or phrases to search for in the article title only.
                 Format similar to 'q' parameter above
             sources:
@@ -279,7 +279,7 @@ class NewsApiWrapper:
             domains:
                 A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to restrict 
                 the search to.
-            excludeDomains:
+            exclude_domains:
                 A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove 
                 from the results.
             from:
@@ -293,7 +293,7 @@ class NewsApiWrapper:
                 Possible options: 
                     ar de en es fr he it nl no pt ru se ud zh. 
                 Default: all languages returned.
-            sortBy:
+            sort_by:
                 The order to sort the articles in. 
                 Possible options: 
                     relevancy = articles more closely related to q come first.
