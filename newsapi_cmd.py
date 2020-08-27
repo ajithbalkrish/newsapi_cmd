@@ -1,10 +1,17 @@
 # importing the required modules
 import os
 import argparse
-import newsapi_wrapper as nw
 import pandas as pd
 import yaml
+import logging
+from logging.config import fileConfig
 from dotenv import load_dotenv
+
+import newsapi_wrapper as nw
+
+# Configure logging
+fileConfig('newsapi_cmd_log.ini')
+logger = logging.getLogger('newsapiLogger')
 
 def write_env(args):
     fname = '.env'
@@ -18,21 +25,25 @@ def write_env(args):
     except Exception as e:
         print(e)
 
-def get_all_news(args):
-    print('get_all_news')
-
-def top_headlines(args):
-    print('top_headlines')
+def query(action, args):
+    logger.debug('top_headlines')
     try:
         load_dotenv()
-        #load_env()
         with open(args[0], 'r') as file:
             params = yaml.safe_load(file)
-        news = nw.NewsApiWrapper(os.getenv("NEWSAPI_KEY"), os.getenv("RESULTS_PATH"))
-        html_path = news.get_top_headlines_html(**params)
+        news = nw.NewsApiWrapper(os.getenv("NEWSAPI_KEY"), 
+                                 os.getenv("RESULTS_PATH"),
+                                 logger=logger
+                                )
+        if action == 'topnews':
+            html_path = news.get_top_headlines_html(**params)
+        elif action == 'allnews':
+            html_path = news.get_all_news(**params)
+        else:
+            raise logger.exception("Invalid acttion passed to query")
         print('Results saved in {}'.format(html_path) )
     except Exception as e:
-        print(e)
+        logger.exception(e, exc_info=True)
         
 def check_setup():
     if not os.path.exists('.env'):
@@ -46,21 +57,24 @@ def check_setup():
         print('Run => news_feeds.py --setup newsapi_key data_loc')
         exit()
 
-def main():
+def main():  
+    # Help strings  
+    all_tmplt = './newsapi_wrapper/Templates/get_everything_query_template.yaml'
+    allnews_help = "Get news headlines; use {} as template for input file.".format(all_tmplt)
+    top_tmplt = './newsapi_wrapper/Templates/top_headlines_query_template.yaml'
+    topnews_help = "Get news headlines; use {} as template for input file.".format(top_tmplt)
+    setup_help = 'newsapi_key: API key from newsapi.org; data_loc: directory to save query results'
+
     # create parser object
     parser = argparse.ArgumentParser(description = "A news feed aggregator!")
-
     # defining arguments for parser object 
     parser.add_argument("-t", "--topnews", type=str, nargs=1,
-                        metavar = ('input_file'),
-                        help = "Get top headlines based on the query.")
+                        metavar=('input_file'), help=topnews_help)
     parser.add_argument("-a", "--allnews", type=str, nargs=1,
-                        metavar = ('input_file'),
-                        help = "Get all headlines based on the query.")
-    parser.add_argument("-s", "--setup", type = str, nargs = 2,
-                        metavar = ('newsapi_key','data_loc'),
-                        help="newsapi_key: API key from https://newsapi.org/; data_loc: directory to save query results")
-                        
+                        metavar=('input_file'), help=allnews_help)
+    parser.add_argument("-s", "--setup", type=str, nargs=2,
+                        metavar=('newsapi_key','data_loc'),
+                        help=setup_help)
     # parser.add_argument("-t", "--top_headlines", type = str, nargs = ,
     #                     metavar = "file_name", default = None,
     #                     help = "Opens and reads the specified text file.")
@@ -71,17 +85,15 @@ def main():
         check_setup()
     # calling functions depending on type of argument
     if args.setup != None:
-            write_env(args.setup)
+        write_env(args.setup)
     elif args.topnews != None:
-            top_headlines(args.topnews)
+        query('topnews', args.topnews)
     elif args.allnews != None:
-            get_all_news(args.allnews)
+        query('allnews', args.allnews)
     else:
         parser.print_help()
 
 if __name__ == "__main__":
     main()
 
-#NEWSAPI_KEY='d8d4416f2cc543f08186ea5b07f352c3'
-#RESULTS_PATH: "/Volumes/Data-2/Data Science/Projects/News/Results/"
 

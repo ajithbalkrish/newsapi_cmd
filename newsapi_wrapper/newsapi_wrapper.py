@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 import time
 import os
 import json
@@ -9,6 +8,8 @@ import pandas as pd
 from pandas import json_normalize
 from newsapi import NewsApiClient
 from datetime import datetime, timedelta, date
+import logging
+from logging.config import fileConfig
 
 pd.options.display.float_format = '{:.2f}'.format
 pd.set_option('display.max_columns', 30)
@@ -20,12 +21,11 @@ DATA_PATH = "./Data/"
 HTML_TEMPLATE = "query_result_template.html"
 PAGE_SIZE = 10
 
-
 class NewsApiWrapper:
     #
     # Constructor
     #    
-    def __init__(self, api_key, results_dir):
+    def __init__(self, api_key, results_dir, logger=logging.getLogger()):
         """
         Default arguments:
             api_key: News API key
@@ -33,22 +33,23 @@ class NewsApiWrapper:
         Keyword arguments passed in query_args:
             :
         """
+        self._logger = logger
         if not os.path.exists(results_dir):
-            raise Exception("ERROR: Directory does not exist: {}".format(results_dir))
+            self._logger.exception("Directory does not exist: {}".format(results_dir))
         self._results_dir = results_dir
         dir_path = os.path.dirname(os.path.realpath(__file__))
         self._template_dir = dir_path + TEMPLATE_PATH.lstrip('.')
         self._data_dir = dir_path + DATA_PATH.lstrip('.')
         self._html_template = HTML_TEMPLATE
         self._pgsize = PAGE_SIZE
-        print('results_dir: {}'.format(results_dir))
-        print('api_key: {}'.format(api_key))
+        self._logger.debug('results_dir: {}'.format(results_dir))
+        #self._logger.debug('api_key: {}'.format(api_key))
         try:
             self._newsapi = NewsApiClient(api_key=api_key)
             self._newsapi_calls = {'get_top_headlines': self._newsapi.get_top_headlines,
                                     'get_everything': self._newsapi.get_everything}
         except:
-            print('ERROR: Failed to initialize NewsApiClient')
+            self._logger.exception('Failed to initialize NewsApiClient')
             raise
                 
 
@@ -71,7 +72,7 @@ class NewsApiWrapper:
             with open(path, "w") as file:
                 json.dump(data, file)
         except Exception as e:
-            print(e)
+            self._logger.exception(e)
 
     def _read_persisted_reponse_blob(self, fname):
         try:
@@ -80,7 +81,7 @@ class NewsApiWrapper:
                 data = json.load(file)
                 return data
         except Exception as e:
-            print(e)
+            self._logger.exception(e)
             return ''
     def _read_html_template(self):
         try:
@@ -89,7 +90,7 @@ class NewsApiWrapper:
                 data = file.read()
                 return data
         except Exception as e:
-            print(e)
+            self._logger.exception(e)
             return ''
 
     def _create_df_from_article_list(self, articles):
@@ -159,20 +160,20 @@ class NewsApiWrapper:
             raise Exception("ERROR: you can't mix category with the sources param: \
                 ({}, {})".format(args['category'], args['sources']))
     
-        for key, val in args.items():
-            print('{}: {}'.format(key, args[key]))
+        # for key, val in args.items():
+        #     print('{}: {}'.format(key, args[key]))
         return args
     #
     # Public methods
     #    
     def query(self, api_name, queryname, persist=True, **query_args):
-        print (queryname)
+        self._logger.debug('Query Name: {}'.format(queryname))
         # Add page size, language to query args
         pgsize = self._pgsize        
         query_args.update(language='en')
         query_args.update(page_size=pgsize)
         # Call corresponding News API 
-        #results = self._newsapi.get_top_headlines(**query_args)
+        self._logger.debug('Calling {}()'.format(api_name))
         results = self._newsapi_calls[api_name](**query_args)
         # Validate results
         self._validate_response(results, api_name)       
@@ -180,13 +181,16 @@ class NewsApiWrapper:
         total_results = results.pop('totalResults', 0)
         # if total results are more than pgsize, repeat query to get
         # all results
+        self._logger.debug('status: {}, total_results: {}, pgsize: {}'.format(
+                           status, total_results, pgsize))
         if total_results > pgsize:
             if total_results%pgsize != 0:
                 total = total_results + (pgsize - (total_results%pgsize))
             remaining = total//pgsize - 1
+            self._logger.debug('Retrieving remaining pages')
             for count in range(remaining):
                 pg = count+2
-                #next_pg = self._newsapi.get_top_headlines(page=pg, **query_args)
+                self._logger.debug('Calling {}() for page {}'.format(api_name, pg))
                 next_pg = self._newsapi_calls[api_name](page=pg, **query_args)
                 self._validate_response(next_pg, api_name)
                 results['articles'] += next_pg['articles']
@@ -201,7 +205,6 @@ class NewsApiWrapper:
         if persist:
             self._persist_query_response_blob(results, queryname)
         return results  
-
     def get_top_headlines_html(self, **query_args):
         """Get top headlines by calling newsapi get_top_headlines with provided arguments.
         Keyword arguments:
@@ -225,7 +228,6 @@ class NewsApiWrapper:
                 category params.
             q
                 Keywords or a phrase to search for.
-
         Response:
             Saves results under <results_dir> with name query_name-<timestamp>.html". 
         """
@@ -241,4 +243,70 @@ class NewsApiWrapper:
             article_df = self._create_df_from_article_list(results['articles'])
             return self._save_query_response_html(article_df, results['query'], queryname)
         except Exception as e:
-            print(e)
+            self._logger.exception(e)
+    def get_all_news(self, **query_args):
+        """Get all news items by calling newsapi get_everything API with provided arguments.
+        Keyword arguments:
+            query_name:
+                Name of the query. This name will be prefixed in the file name when the results are 
+                saved in html and/or json format.It is manadatory to provide a meaningful query name.
+                To set the query name, uncomment the line below and add the name
+            q:
+                Keywords or phrases to search for in the article title and body.
+                Advanced search is supported here:
+                    Surround phrases with quotes (") for exact match.
+                    Prepend words or phrases that must appear with a + symbol. Eg: +bitcoin
+                    Prepend words that must not appear with a - symbol. Eg: -bitcoin
+                    Alternatively you can use the AND / OR / NOT keywords, and optionally group these 
+                    with parenthesis. Eg: crypto AND (ethereum OR litecoin) NOT bitcoin.
+                The complete value for q must be URL-encoded.
+            qInTitle:
+                Keywords or phrases to search for in the article title only.
+                Format similar to 'q' parameter above
+            sources:
+                A comma-seperated string of identifiers (maximum 20) for the news sources or blogs you want 
+                headlines from. Use the sources API to locate these programmatically or look at the 
+                sources index in newsapi.org.
+            domains:
+                A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to restrict 
+                the search to.
+            excludeDomains:
+                A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove 
+                from the results.
+            from:
+                A date and optional time for the oldest article allowed. This should be in ISO 8601 format 
+                (e.g. 2020-08-25 or 2020-08-25T05:26:58) Default: the oldest according to your plan.
+            to:
+                A date and optional time for the newest article allowed. This should be in ISO 8601 format 
+                (e.g. 2020-08-25 or 2020-08-25T05:26:58) Default: the newest according to your plan.
+            language:
+                The 2-letter ISO-639-1 code of the language you want to get headlines for. 
+                Possible options: 
+                    ar de en es fr he it nl no pt ru se ud zh. 
+                Default: all languages returned.
+            sortBy:
+                The order to sort the articles in. 
+                Possible options: 
+                    relevancy = articles more closely related to q come first.
+                    popularity = articles from popular sources and publishers come first.
+                    publishedAt = newest articles come first.
+                Default: publishedAt
+        Response:
+            Saves results under <results_dir> with name query_name-<timestamp>.html". 
+        """
+        try:
+            self._logger.error('Not implemented')
+            # args = self._validate_top_headlines_args(**query_args)
+            # # Get query name and append it with timestamp to use it as html/json filename
+            # queryname = args.pop('query_name')
+            # now = datetime.now()
+            # time = now.strftime("%m_%d_%Y-%H_%M_%S")
+            # queryname = queryname + '-{}'.format(time)
+            # # Call get_top_headlines with provided query args
+            # results = self.query('get_top_headlines', queryname, **args)
+            # article_df = self._create_df_from_article_list(results['articles'])
+            # return self._save_query_response_html(article_df, results['query'], queryname)
+            return ''
+        except Exception as e:
+            self._logger.exception(e)
+
