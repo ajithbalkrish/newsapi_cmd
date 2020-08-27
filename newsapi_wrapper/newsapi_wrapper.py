@@ -19,7 +19,7 @@ pd.set_option('display.max_rows', 100)
 TEMPLATE_PATH = "./Templates/"
 DATA_PATH = "./Data/"
 HTML_TEMPLATE = "query_result_template.html"
-PAGE_SIZE = 10
+PAGE_SIZE = 100
 
 class NewsApiWrapper:
     #
@@ -138,7 +138,7 @@ class NewsApiWrapper:
             if status != 'ok':
                 raise Exception("ERROR: Not OK status from News API {}".format(api_name))
 
-    def _validate_top_headlines_args(self, **args):
+    def _remove_empty_args(self, **args):
         to_remove = []
         for key, val in args.items():
             if isinstance(val, int) and val == 0:
@@ -149,6 +149,10 @@ class NewsApiWrapper:
                 to_remove.append(key)
         for key in to_remove:
             args.pop(key)
+        return args
+
+    def _validate_top_headlines_args(self, **args):
+        args = self._remove_empty_args(**args)
         if not 'query_name' in args:
             raise Exception("ERROR: query_name is not provided")
         if 'country' in args and 'sources' in args:
@@ -163,6 +167,12 @@ class NewsApiWrapper:
         # for key, val in args.items():
         #     print('{}: {}'.format(key, args[key]))
         return args
+    
+    def _query_name_with_timestamp(self, queryname):
+        now = datetime.now()
+        time = now.strftime("%m_%d_%Y-%H_%M_%S")
+        return queryname + '-{}'.format(time)
+
     #
     # Public methods
     #    
@@ -205,6 +215,7 @@ class NewsApiWrapper:
         if persist:
             self._persist_query_response_blob(results, queryname)
         return results  
+
     def get_top_headlines_html(self, **query_args):
         """Get top headlines by calling newsapi get_top_headlines with provided arguments.
         Keyword arguments:
@@ -234,16 +245,14 @@ class NewsApiWrapper:
         try:
             args = self._validate_top_headlines_args(**query_args)
             # Get query name and append it with timestamp to use it as html/json filename
-            queryname = args.pop('query_name')
-            now = datetime.now()
-            time = now.strftime("%m_%d_%Y-%H_%M_%S")
-            queryname = queryname + '-{}'.format(time)
+            queryname = self._query_name_with_timestamp(args.pop('query_name'))
             # Call get_top_headlines with provided query args
             results = self.query('get_top_headlines', queryname, **args)
             article_df = self._create_df_from_article_list(results['articles'])
             return self._save_query_response_html(article_df, results['query'], queryname)
         except Exception as e:
             self._logger.exception(e)
+
     def get_all_news(self, **query_args):
         """Get all news items by calling newsapi get_everything API with provided arguments.
         Keyword arguments:
@@ -260,7 +269,7 @@ class NewsApiWrapper:
                     Alternatively you can use the AND / OR / NOT keywords, and optionally group these 
                     with parenthesis. Eg: crypto AND (ethereum OR litecoin) NOT bitcoin.
                 The complete value for q must be URL-encoded.
-            qInTitle:
+            qintitle:
                 Keywords or phrases to search for in the article title only.
                 Format similar to 'q' parameter above
             sources:
@@ -270,7 +279,7 @@ class NewsApiWrapper:
             domains:
                 A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to restrict 
                 the search to.
-            excludeDomains:
+            exclude_domains:
                 A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove 
                 from the results.
             from:
@@ -284,7 +293,7 @@ class NewsApiWrapper:
                 Possible options: 
                     ar de en es fr he it nl no pt ru se ud zh. 
                 Default: all languages returned.
-            sortBy:
+            sort_by:
                 The order to sort the articles in. 
                 Possible options: 
                     relevancy = articles more closely related to q come first.
@@ -295,18 +304,14 @@ class NewsApiWrapper:
             Saves results under <results_dir> with name query_name-<timestamp>.html". 
         """
         try:
-            self._logger.error('Not implemented')
-            # args = self._validate_top_headlines_args(**query_args)
-            # # Get query name and append it with timestamp to use it as html/json filename
-            # queryname = args.pop('query_name')
-            # now = datetime.now()
-            # time = now.strftime("%m_%d_%Y-%H_%M_%S")
-            # queryname = queryname + '-{}'.format(time)
-            # # Call get_top_headlines with provided query args
-            # results = self.query('get_top_headlines', queryname, **args)
-            # article_df = self._create_df_from_article_list(results['articles'])
-            # return self._save_query_response_html(article_df, results['query'], queryname)
-            return ''
+            args = self._remove_empty_args(**query_args)
+            # Get query name and append it with timestamp to use it as html/json filename
+            queryname = self._query_name_with_timestamp(args.pop('query_name'))
+            # Call get_everything with provided query args
+            results = self.query('get_everything', queryname, **args)
+            article_df = self._create_df_from_article_list(results['articles'])
+            return self._save_query_response_html(article_df, results['query'], queryname)
         except Exception as e:
             self._logger.exception(e)
+
 

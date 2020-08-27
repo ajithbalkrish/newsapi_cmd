@@ -19,7 +19,7 @@ q: ''
 # qInTitle
 # Keywords or phrases to search for in the article title only.
 # Format similar to 'q' parameter above
-qInTitle: ''
+qintitle: ''
 
 # sources
 # A comma-seperated string of identifiers (maximum 20) for the news sources or blogs you want 
@@ -35,12 +35,13 @@ domains: ''
 # excludeDomains
 # A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove 
 # from the results.
-excludeDomains: ''
+exclude_domains: ''
 
-# from
+# from_param
 # A date and optional time for the oldest article allowed. This should be in ISO 8601 format 
 # (e.g. 2020-08-25 or 2020-08-25T05:26:58) Default: the oldest according to your plan.
-from: ''
+from_param: ''
+
 # to
 # A date and optional time for the newest article allowed. This should be in ISO 8601 format 
 # (e.g. 2020-08-25 or 2020-08-25T05:26:58) Default: the newest according to your plan.
@@ -51,7 +52,7 @@ to: ''
 # Possible options: 
 #      ar de en es fr he it nl no pt ru se ud zh. 
 # Default: all languages returned.
-language: ''
+language: 'en'
 
 # sortBy
 # The order to sort the articles in. 
@@ -60,4 +61,4 @@ language: ''
 #      popularity = articles from popular sources and publishers come first.
 #      publishedAt = newest articles come first.
 # Default: publishedAt
-sortBy: 'publishedAt'
+sort_by: 'publishedAt'
