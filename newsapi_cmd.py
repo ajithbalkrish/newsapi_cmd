@@ -42,6 +42,7 @@ def query(action, args):
         else:
             raise logger.exception("Invalid acttion passed to query")
         print('Results saved in {}'.format(html_path) )
+        logger.debug('Results saved in {}'.format(html_path))
     except Exception as e:
         logger.exception(e, exc_info=True)
         
