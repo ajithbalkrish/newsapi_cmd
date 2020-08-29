@@ -49,7 +49,8 @@ class NewsApiWrapper:
         try:
             self._newsapi = NewsApiClient(api_key=api_key)
             self._newsapi_calls = {'get_top_headlines': self._newsapi.get_top_headlines,
-                                    'get_everything': self._newsapi.get_everything}
+                                   'get_everything': self._newsapi.get_everything,
+                                   'get_sources': self._newsapi.get_sources}
         except:
             self._logger.exception('Failed to initialize NewsApiClient')
             raise
@@ -68,6 +69,13 @@ class NewsApiWrapper:
         article_df['Date'] = article_df['Date'].astype('datetime64[D]')
         return article_df[new_order]
  
+    def _cleanup_source_df(self, source_df):
+        new_cols={'id': 'Source ID', 'name': 'Source Name', 'description': 'Description',
+                  'url': 'URL','category': 'Category', 'language': 'Language',
+                  'country': 'Country'}
+        source_df = source_df.rename(columns=new_cols)
+        return source_df
+
     def _persist_query_response_blob(self, data, fname):
         path = self._data_dir+fname+'.json'
         try:
@@ -99,20 +107,33 @@ class NewsApiWrapper:
         df = json_normalize(articles)
         return self._cleanup_article_df(df)
 
-    def _make_clickable(self, df):
+    def _create_df_from_source_list(self, sources):
+        df = json_normalize(sources)
+        return self._cleanup_source_df(df)
+      
+    def _add_hyperlink_to_title(self, df):
         title = df['Title']
         url = df['URL']
         return f'<a href="{url}">{title}</a>'
 
+    def _add_hyperlink_to_source_name(self, df):
+        title = df['Source Name']
+        url = df['URL']
+        return f'<a href="{url}">{title}</a>'
+
     def _build_query_string(self, query_data):
+        self._logger.debug('_build_query_string: {}'.format(query_data))
         value = query_data.pop('Date')
         string = "Date: "+value+"<br>"
+        self._logger.debug('{}'.format(string))
         for key, value in query_data.items():
             temp = '{}: {} <br>'.format(key, value)
             string += temp
         return string
 
-    def _save_query_response_html(self, article_df, query_data, fname):
+    def _save_query_response_html(self, api_name, df, query_data, fname):
+        self._logger.debug('_save_query_response_html {}, {}'.format(
+                            api_name, fname))
         dst_css = self._results_dir+'style.css'
         if not os.path.exists(dst_css):
             shutil.copyfile(self._template_dir + 'style_template.css', dst_css)
@@ -120,10 +141,15 @@ class NewsApiWrapper:
             path = self._results_dir+fname+'.html'
             query_string = self._build_query_string(query_data)
             html_template = self._read_html_template()
-            article_df['Title'] = article_df.apply(lambda article_df: 
-                                                    self._make_clickable(article_df), 
-                                                    axis=1)
-            df = article_df[['Date','Title', 'Summary', 'Author', 'Source']]
+            if  api_name == 'get_sources':
+                df['Source Name'] = df.apply(lambda df: self._add_hyperlink_to_source_name(df), 
+                                                axis=1)
+                df = df.drop(['URL'], axis = 1) 
+            else:
+                df['Title'] = df.apply(lambda df: self._add_hyperlink_to_title(df), 
+                                                axis=1)
+                df = df[['Date','Title', 'Summary', 'Author', 'Source']]
+                
             table = df.to_html(escape=False, index=False)
             with open(path, "w") as file:
                 file.write(html_template.format(query=query_string,
@@ -180,10 +206,11 @@ class NewsApiWrapper:
     #    
     def query(self, api_name, queryname, persist=True, **query_args):
         self._logger.debug('Query Name: {}'.format(queryname))
-        # Add page size, language to query args
+        # pgsize language to query args
         pgsize = self._pgsize        
         query_args.update(language='en')
-        query_args.update(page_size=pgsize)
+        if not api_name == 'get_sources':
+            query_args.update(page_size=pgsize)
         # Call corresponding News API 
         self._logger.debug('Calling {}()'.format(api_name))
         results = self._newsapi_calls[api_name](**query_args)
@@ -193,20 +220,22 @@ class NewsApiWrapper:
         total_results = results.pop('totalResults', 0)
         # if total results are more than pgsize, repeat query to get
         # all results
-        self._logger.debug('status: {}, total_results: {}, pgsize: {}'.format(
-                           status, total_results, pgsize))
-        if total_results > pgsize:
-            if total_results%pgsize != 0:
-                total = total_results + (pgsize - (total_results%pgsize))
-            remaining = total//pgsize - 1
-            self._logger.debug('Retrieving remaining pages')
-            for count in range(remaining):
-                pg = count+2
-                self._logger.debug('Calling {}() for page {}'.format(api_name, pg))
-                next_pg = self._newsapi_calls[api_name](page=pg, **query_args)
-                self._validate_response(next_pg, api_name)
-                results['articles'] += next_pg['articles']
+        if not api_name == 'get_sources':
+            self._logger.debug('status: {}, total_results: {}, pgsize: {}'.format(
+                           status, total_results, self._pgsize))
+            if total_results > self._pgsize:
+                if total_results%self._pgsize != 0:
+                    total = total_results + (pgsize - (total_results%self._pgsize))
+                remaining = total//(self._pgsize - 1)
+                self._logger.debug('Retrieving remaining pages')
+                for count in range(remaining):
+                    pg = count+2
+                    self._logger.debug('Calling {}() for page {}'.format(api_name, pg))
+                    next_pg = self._newsapi_calls[api_name](page=pg, **query_args)
+                    self._validate_response(next_pg, api_name)
+                    results['articles'] += next_pg['articles']
         # Add query name and date to results to save
+        query_args.update(api_name=api_name)
         query_args.update(query_name=queryname)
         now = date.today()
         query_args.update(Date=now.strftime("%m-%d-%Y"))
@@ -251,7 +280,8 @@ class NewsApiWrapper:
             # Call get_top_headlines with provided query args
             results = self.query('get_top_headlines', queryname, **args)
             article_df = self._create_df_from_article_list(results['articles'])
-            return self._save_query_response_html(article_df, results['query'], queryname)
+            return self._save_query_response_html('get_top_headlines', article_df, 
+                                                   results['query'], queryname)
         except Exception as e:
             self._logger.exception(e)
 
@@ -312,8 +342,44 @@ class NewsApiWrapper:
             # Call get_everything with provided query args
             results = self.query('get_everything', queryname, **args)
             article_df = self._create_df_from_article_list(results['articles'])
-            return self._save_query_response_html(article_df, results['query'], queryname)
+            return self._save_query_response_html('get_everything', article_df, 
+                                                  results['query'], queryname)
         except Exception as e:
             self._logger.exception(e)
 
+    def get_sources(self, **query_args):
+        """ Return the available news publishers; 
+        Keyword arguments:
+        category: 
+            Find sources that display news of this category. 
+            Possible options: 
+            business entertainment general health science sports technology . 
+            Default: all categories.
+        language:
+            Find sources that display news in a specific language. 
+            Possible options: 
+                ar de en es fr he it nl no pt ru se ud zh . 
+            Default: all languages.
+        country
+            Find sources that display news in a specific country. 
+            Possible options: 
+                ae ar at au be bg br ca ch cn co cu cz de eg fr gb gr hk hu id ie il in 
+                it jp kr lt lv ma mx my ng nl no nz ph pl pt ro rs ru sa se sg si sk th 
+                tr tw ua us ve za . 
+            Default: all countries.
+
+        Response:
+            Saves the results under <results_dir> with name query_name-<timestamp>.html". 
+        """
+        try:
+            args = self._remove_empty_args(**query_args)
+            # Get query name and append it with timestamp to use it as html/json filename
+            queryname = self._query_name_with_timestamp(args.pop('query_name'))
+            # Call get_everything with provided query args
+            results = self.query('get_sources', queryname, **args)
+            df = self._create_df_from_source_list(results['sources'])
+            return self._save_query_response_html('get_sources', df, results['query'], 
+                                                    queryname)
+        except Exception as e:
+            self._logger.exception(e)
 

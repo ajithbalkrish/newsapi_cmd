@@ -1,4 +1,9 @@
-# Return the available news publishers; 
+# Return the available news publishers;
+
+# Name of the query. This name will be prefixed in the file name when the results are 
+# saved in html and/or json format.It is manadatory to provide a meaningful query name.
+# To set the query name, uncomment the line below and add the name
+query_name: ''
 
 # category
 # Find sources that display news of this category. 

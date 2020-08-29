@@ -39,7 +39,7 @@ def query(action, args):
         elif action == 'allnews':
             html_path = news.get_all_news(**params)
         elif action == 'sources':
-            raise logger.exception("Not implemented")
+            html_path= news.get_sources(**params)
         else:
             raise logger.exception("Invalid acttion passed to query")
         print('Results saved in {}'.format(html_path) )
