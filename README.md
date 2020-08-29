@@ -1,6 +1,8 @@
 **newsapi_cmd.py**
 A Python command line utility to explore news APIs from newsapi.org.
-Copyright (c) 2020-2022 Ajith Balakrishnan ajith.balakrish@gmail.com
+
+Copyright (c) 2020-2022 Ajith Balakrishnan ajith.balakrish@gmail.com.
+
 News API Terms of Service can be found in https://newsapi.org/terms.
 
 ------------
