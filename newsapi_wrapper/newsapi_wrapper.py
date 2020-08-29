@@ -38,12 +38,14 @@ class NewsApiWrapper:
             self._logger.exception("Directory does not exist: {}".format(results_dir))
         self._results_dir = results_dir
         dir_path = os.path.dirname(os.path.realpath(__file__))
+        data_dir = dir_path + DATA_PATH.lstrip('.')
+        if not os.path.exists(data_dir):
+            os.mkdir(data_dir)
+        self._data_dir = data_dir
         self._template_dir = dir_path + TEMPLATE_PATH.lstrip('.')
-        self._data_dir = dir_path + DATA_PATH.lstrip('.')
         self._html_template = HTML_TEMPLATE
         self._pgsize = PAGE_SIZE
         self._logger.debug('results_dir: {}'.format(results_dir))
-        #self._logger.debug('api_key: {}'.format(api_key))
         try:
             self._newsapi = NewsApiClient(api_key=api_key)
             self._newsapi_calls = {'get_top_headlines': self._newsapi.get_top_headlines,
@@ -240,7 +242,7 @@ class NewsApiWrapper:
             q
                 Keywords or a phrase to search for.
         Response:
-            Saves results under <results_dir> with name query_name-<timestamp>.html". 
+            Saves the results under <results_dir> with name query_name-<timestamp>.html". 
         """
         try:
             args = self._validate_top_headlines_args(**query_args)
@@ -301,7 +303,7 @@ class NewsApiWrapper:
                     publishedAt = newest articles come first.
                 Default: publishedAt
         Response:
-            Saves results under <results_dir> with name query_name-<timestamp>.html". 
+            Saves the results under <results_dir> with name query_name-<timestamp>.html". 
         """
         try:
             args = self._remove_empty_args(**query_args)
