@@ -34,8 +34,8 @@ class NewsApiWrapper:
         """
         self._logger = logger
         if not os.path.exists(results_dir):
-            self._logger.exception("Directory does not exist: {}".format(
-                results_dir))
+            self._logger.exception(
+                "Directory does not exist: {}".format(results_dir))
         self._results_dir = results_dir
         dir_path = os.path.dirname(os.path.realpath(__file__))
         data_dir = dir_path + DATA_PATH.lstrip('.')
@@ -247,7 +247,7 @@ class NewsApiWrapper:
         query_args.update(Date=now.strftime("%m-%d-%Y"))
         query_args.pop('page_size',0)
         results.update(query=query_args)
-        ## Add query status to results to save
+        # Add query status to results to save
         results.update(
             query_status={'status':status, 'totalResults':total_results})
         if persist:
@@ -395,7 +395,6 @@ class NewsApiWrapper:
                 ie il in it jp kr lt lv ma mx my ng nl no nz ph pl pt ro rs 
                 ru sa se sg si sk th tr tw ua us ve za . 
             Default: all countries.
-
         Response:
             Saves the results under <results_dir> with name 
             query_name-<timestamp>.html". 
