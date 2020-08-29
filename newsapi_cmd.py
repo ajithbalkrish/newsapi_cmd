@@ -11,7 +11,7 @@ import newsapi_wrapper as nw
 
 # Configure logging
 fileConfig('newsapi_cmd_log.ini')
-logger = logging.getLogger('newsapiLogger')
+logger = logging.getLogger('newsapiCmd')
 
 def write_env(args):
     fname = '.env'
@@ -52,7 +52,6 @@ def check_setup():
         print('Setup is not done.')
         print('Run => news_feeds.py --configure newsapi_key data_loc')
         exit()
-    #load_env()
     load_dotenv()
     if not os.getenv("NEWSAPI_KEY"):
         print('Setup is not done.')
@@ -60,20 +59,26 @@ def check_setup():
         exit()
 
 def main():  
-    # Help strings  
-    all_tmplt = './newsapi_wrapper/Templates/get_everything_query_template.yaml'
-    allnews_help = "get all news headlinesbased on the query; template for input file: {}.".format(all_tmplt)
+    # Help strings 
+    TEMPLATE_PATH = './newsapi_wrapper/Templates/' 
+    all_tmplt = TEMPLATE_PATH+'get_everything_query_template.yaml'
+    allnews_help = "get all news headlinesbased on the query; \
+        template for input file: {}.".format(all_tmplt)
 
-    top_tmplt = './newsapi_wrapper/Templates/top_headlines_query_template.yaml'
-    topnews_help = "get top news headlines based on the query; template for input file: {}.".format(top_tmplt)
+    top_tmplt = TEMPLATE_PATH+'top_headlines_query_template.yaml'
+    topnews_help = "get top news headlines based on the query; \
+        template for input file: {}.".format(top_tmplt)
 
-    sources_tmplt = './newsapi_wrapper/Templates/source_query_template.yaml'
-    sources_help = "return the available news publishers; template for input file: {}.".format(sources_tmplt)
+    sources_tmplt = TEMPLATE_PATH+'source_query_template.yaml'
+    sources_help = "return the available news publishers; template \
+        for input file: {}.".format(sources_tmplt)
     
-    config_help = 'newsapi_key: API key from newsapi.org; data_loc: directory to save query results'
+    config_help = 'newsapi_key: API key from newsapi.org; data_loc: \
+        directory to save query results'
 
     # create parser object
-    parser = argparse.ArgumentParser(description = "Command line utility to explore news APIs from newsapi.org")
+    parser = argparse.ArgumentParser(description \
+        = "Command line utility to explore news APIs from newsapi.org")
     # defining arguments for parser object 
     parser.add_argument("-c", "--configure", type=str, nargs=2,
                         metavar=('newsapi_key','data_loc'),

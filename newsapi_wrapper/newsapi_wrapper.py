@@ -15,7 +15,6 @@ pd.options.display.float_format = '{:.2f}'.format
 pd.set_option('display.max_columns', 30)
 pd.set_option('display.max_rows', 100)
 
-
 TEMPLATE_PATH = "./Templates/"
 DATA_PATH = "./Data/"
 HTML_TEMPLATE = "query_result_template.html"
@@ -35,7 +34,8 @@ class NewsApiWrapper:
         """
         self._logger = logger
         if not os.path.exists(results_dir):
-            self._logger.exception("Directory does not exist: {}".format(results_dir))
+            self._logger.exception("Directory does not exist: {}".format(
+                results_dir))
         self._results_dir = results_dir
         dir_path = os.path.dirname(os.path.realpath(__file__))
         data_dir = dir_path + DATA_PATH.lstrip('.')
@@ -48,31 +48,34 @@ class NewsApiWrapper:
         self._logger.debug('results_dir: {}'.format(results_dir))
         try:
             self._newsapi = NewsApiClient(api_key=api_key)
-            self._newsapi_calls = {'get_top_headlines': self._newsapi.get_top_headlines,
-                                   'get_everything': self._newsapi.get_everything,
-                                   'get_sources': self._newsapi.get_sources}
+            self._newsapi_calls = {
+                'get_top_headlines': self._newsapi.get_top_headlines,
+                'get_everything': self._newsapi.get_everything,
+                'get_sources': self._newsapi.get_sources}
         except:
             self._logger.exception('Failed to initialize NewsApiClient')
             raise
                 
-
     #
     # Private methods
     #
     def _cleanup_article_df(self, article_df):   
-        new_cols={'author':'Author', 'title':'Title', 'description':'Summary', 
-                  'url': 'URL','urlToImage':'URL to Image', 'publishedAt':'Date', 
-                  'content': 'Content', 'source.name': 'Source'}
-        new_order = ['Date','Title', 'Summary', 'Author', 'Source', 'Content',
-                     'URL', 'URL to Image']
+        new_cols={
+            'author':'Author', 'title':'Title', 'description':'Summary', 
+            'url': 'URL','urlToImage':'URL to Image', 'publishedAt':'Date',
+            'content': 'Content', 'source.name': 'Source'}
+        new_order = [
+            'Date','Title', 'Summary', 'Author', 'Source', 'Content','URL',
+            'URL to Image']
         article_df = article_df.rename(columns=new_cols)
         article_df['Date'] = article_df['Date'].astype('datetime64[D]')
         return article_df[new_order]
  
     def _cleanup_source_df(self, source_df):
-        new_cols={'id': 'Source ID', 'name': 'Source Name', 'description': 'Description',
-                  'url': 'URL','category': 'Category', 'language': 'Language',
-                  'country': 'Country'}
+        new_cols={
+            'id': 'Source ID', 'name': 'Source Name', 
+            'description': 'Description', 'url': 'URL','category': 'Category',
+            'language': 'Language', 'country': 'Country'}
         source_df = source_df.rename(columns=new_cols)
         return source_df
 
@@ -93,6 +96,7 @@ class NewsApiWrapper:
         except Exception as e:
             self._logger.exception(e)
             return ''
+
     def _read_html_template(self):
         try:
             path = self._template_dir + self._html_template
@@ -136,35 +140,37 @@ class NewsApiWrapper:
                             api_name, fname))
         dst_css = self._results_dir+'style.css'
         if not os.path.exists(dst_css):
-            shutil.copyfile(self._template_dir + 'style_template.css', dst_css)
+            shutil.copyfile(
+                self._template_dir + 'style_template.css',dst_css)
         try:
             path = self._results_dir+fname+'.html'
             query_string = self._build_query_string(query_data)
             html_template = self._read_html_template()
             if  api_name == 'get_sources':
-                df['Source Name'] = df.apply(lambda df: self._add_hyperlink_to_source_name(df), 
-                                                axis=1)
+                df['Source Name'] = df.apply(
+                    lambda df: self._add_hyperlink_to_source_name(df), axis=1)
                 df = df.drop(['URL'], axis = 1) 
             else:
-                df['Title'] = df.apply(lambda df: self._add_hyperlink_to_title(df), 
-                                                axis=1)
+                df['Title'] = df.apply(
+                    lambda df: self._add_hyperlink_to_title(df), axis=1)
                 df = df[['Date','Title', 'Summary', 'Author', 'Source']]
-                
             table = df.to_html(escape=False, index=False)
             with open(path, "w") as file:
-                file.write(html_template.format(query=query_string,
-                                                result=table))
+                file.write(html_template.format(
+                    query=query_string, result=table))
             return path                                    
         except Exception as e:
             return str(e)
 
     def _validate_response(self, result, api_name):
         if not bool(result):
-            raise Exception("ERROR: Empty response from News API {}".format(api_name))
+            raise Exception("ERROR: Empty response from News API {}"\
+                .format(api_name))
         else:
             status = result['status']
             if status != 'ok':
-                raise Exception("ERROR: Not OK status from News API {}".format(api_name))
+                raise Exception("ERROR: Not OK status from News API {}"\
+                    .format(api_name))
 
     def _remove_empty_args(self, **args):
         to_remove = []
@@ -185,15 +191,12 @@ class NewsApiWrapper:
             raise Exception("ERROR: query_name is not provided")
         if 'country' in args and 'sources' in args:
             # you can't mix this country with the sources param
-            raise Exception("ERROR: you can't mix country with the sources param: \
-                ({}, {})".format(args['country'], args['sources']))
+            raise Exception("ERROR: you can't mix country with the sources \
+                param: ({}, {})".format(args['country'], args['sources']))
         if 'category' in args and 'sources' in args:
             # you can't mix category with the sources param.
-            raise Exception("ERROR: you can't mix category with the sources param: \
-                ({}, {})".format(args['category'], args['sources']))
-    
-        # for key, val in args.items():
-        #     print('{}: {}'.format(key, args[key]))
+            raise Exception("ERROR: you can't mix category with the sources \
+                param: ({}, {})".format(args['category'], args['sources']))
         return args
     
     def _query_name_with_timestamp(self, queryname):
@@ -221,17 +224,20 @@ class NewsApiWrapper:
         # if total results are more than pgsize, repeat query to get
         # all results
         if not api_name == 'get_sources':
-            self._logger.debug('status: {}, total_results: {}, pgsize: {}'.format(
-                           status, total_results, self._pgsize))
+            self._logger.debug('status: {}, total_results: {}, pgsize: {}'\
+                .format(status, total_results, self._pgsize))
             if total_results > self._pgsize:
                 if total_results%self._pgsize != 0:
-                    total = total_results + (pgsize - (total_results%self._pgsize))
+                    total = total_results + (pgsize 
+                            - (total_results%self._pgsize))
                 remaining = total//(self._pgsize - 1)
                 self._logger.debug('Retrieving remaining pages')
                 for count in range(remaining):
                     pg = count+2
-                    self._logger.debug('Calling {}() for page {}'.format(api_name, pg))
-                    next_pg = self._newsapi_calls[api_name](page=pg, **query_args)
+                    self._logger.debug('Calling {}() for page {}'\
+                        .format(api_name, pg))
+                    next_pg = self._newsapi_calls[api_name](
+                        page=pg, **query_args)
                     self._validate_response(next_pg, api_name)
                     results['articles'] += next_pg['articles']
         # Add query name and date to results to save
@@ -242,108 +248,130 @@ class NewsApiWrapper:
         query_args.pop('page_size',0)
         results.update(query=query_args)
         ## Add query status to results to save
-        results.update(query_status={'status':status, 'totalResults':total_results})
+        results.update(
+            query_status={'status':status, 'totalResults':total_results})
         if persist:
             self._persist_query_response_blob(results, queryname)
         return results  
 
     def get_top_headlines_html(self, **query_args):
-        """Get top headlines by calling newsapi get_top_headlines with provided arguments.
+        """Get top headlines by calling newsapi get_top_headlines with 
+        provided arguments.
         Keyword arguments:
             query_name:
-                Name of the query. This name will be prefixed in the file name when the results are 
-                saved in html and json format.It is manadatory to provide a meaningful query name. 
+                Name of the query. This name will be prefixed in the file name
+                when the results are saved in html and json format.It is 
+                manadatory to provide a meaningful query name. 
             country:
-                The 2-letter ISO 3166-1 code of the country you want to get headlines for. 
-                Possible options: ae ar at au be bg br ca ch cn co cu cz de eg fr gb gr 
-                                  hk hu id ie il in it jp kr lt lv ma mx my ng nl no nz 
-                                  ph pl pt ro rs ru sa se sg si sk th tr tw ua us ve za . 
+                The 2-letter ISO 3166-1 code of the country you want to get 
+                headlines for. 
+                Possible options: ae ar at au be bg br ca ch cn co cu cz de 
+                eg fr gb gr hk hu id ie il in it jp kr lt lv ma mx my ng nl 
+                no nz ph pl pt ro rs ru sa se sg si sk th tr tw ua us ve za  
                 Note: you can't mix this param with the sources param.
             category:
                 The category you want to get headlines for. 
-                Possible options: business entertainment general health science sports technology . 
+                Possible options: business entertainment general health 
+                science sports technology . 
                 Note: you can't mix this param with the sources param.
             sources
-                A comma-seperated string of identifiers for the news sources or blogs you want 
-                headlines from. Use the /sources endpoint to locate these programmatically or 
-                look at the sources index. Note: you can't mix this param with the country or 
-                category params.
+                A comma-seperated string of identifiers for the news sources
+                or blogs you want headlines from. Use the /sources endpoint 
+                to locate these programmatically or look at the sources index.
+                Note: you can't mix this param with the country or category
+                params.
             q
                 Keywords or a phrase to search for.
         Response:
-            Saves the results under <results_dir> with name query_name-<timestamp>.html". 
+            Saves the results under <results_dir> with name 
+            query_name-<timestamp>.html". 
         """
         try:
             args = self._validate_top_headlines_args(**query_args)
-            # Get query name and append it with timestamp to use it as html/json filename
+            # Get query name and append it with timestamp to use it as 
+            # html/json filename
             queryname = self._query_name_with_timestamp(args.pop('query_name'))
             # Call get_top_headlines with provided query args
             results = self.query('get_top_headlines', queryname, **args)
             article_df = self._create_df_from_article_list(results['articles'])
-            return self._save_query_response_html('get_top_headlines', article_df, 
-                                                   results['query'], queryname)
+            return self._save_query_response_html(
+                'get_top_headlines', article_df, results['query'], queryname)
         except Exception as e:
             self._logger.exception(e)
 
     def get_all_news(self, **query_args):
-        """Get all news items by calling newsapi get_everything API with provided arguments.
+        """Get all news items by calling newsapi get_everything API with 
+        provided arguments.
         Keyword arguments:
             query_name:
-                Name of the query. This name will be prefixed in the file name when the results are 
-                saved in html and/or json format.It is manadatory to provide a meaningful query name.
-                To set the query name, uncomment the line below and add the name
+                Name of the query. This name will be prefixed in the file name
+                when the results are saved in html and/or json format.It is 
+                manadatory to provide a meaningful query name. To set the
+                query name, uncomment the line below and add the name
             q:
-                Keywords or phrases to search for in the article title and body.
-                Advanced search is supported here:
+                Keywords or phrases to search for in the article title and
+                body. Advanced search is supported here:
                     Surround phrases with quotes (") for exact match.
-                    Prepend words or phrases that must appear with a + symbol. Eg: +bitcoin
-                    Prepend words that must not appear with a - symbol. Eg: -bitcoin
-                    Alternatively you can use the AND / OR / NOT keywords, and optionally group these 
-                    with parenthesis. Eg: crypto AND (ethereum OR litecoin) NOT bitcoin.
+                    Prepend words or phrases that must appear with a + symbol
+                    Eg: +bitcoin
+                    Prepend words that must not appear with a - symbol. 
+                    Eg: -bitcoin
+                    Alternatively you can use the AND / OR / NOT keywords, and
+                    optionally group these with parenthesis. 
+                    Eg: crypto AND (ethereum OR litecoin) NOT bitcoin.
                 The complete value for q must be URL-encoded.
             qintitle:
                 Keywords or phrases to search for in the article title only.
                 Format similar to 'q' parameter above
             sources:
-                A comma-seperated string of identifiers (maximum 20) for the news sources or blogs you want 
-                headlines from. Use the sources API to locate these programmatically or look at the 
-                sources index in newsapi.org.
+                A comma-seperated string of identifiers (maximum 20) for the
+                news sources or blogs you want headlines from. Use the sources
+                API to locate these programmatically or look at the sources
+                index in newsapi.org.
             domains:
-                A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to restrict 
-                the search to.
+                A comma-seperated string of domains (eg bbc.co.uk, 
+                techcrunch.com, engadget.com) to restrict the search to.
             exclude_domains:
-                A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove 
-                from the results.
+                A comma-seperated string of domains (eg bbc.co.uk, 
+                techcrunch.com, engadget.com) to remove from the results.
             from:
-                A date and optional time for the oldest article allowed. This should be in ISO 8601 format 
-                (e.g. 2020-08-25 or 2020-08-25T05:26:58) Default: the oldest according to your plan.
+                A date and optional time for the oldest article allowed. This
+                should be in ISO 8601 format (e.g. 2020-08-25 or 
+                2020-08-25T05:26:58) Default: the oldest according to your plan.
             to:
-                A date and optional time for the newest article allowed. This should be in ISO 8601 format 
-                (e.g. 2020-08-25 or 2020-08-25T05:26:58) Default: the newest according to your plan.
+                A date and optional time for the newest article allowed. This 
+                should be in ISO 8601 format (e.g. 2020-08-25 or 
+                2020-08-25T05:26:58) 
+                Default: the newest according to your plan.
             language:
-                The 2-letter ISO-639-1 code of the language you want to get headlines for. 
-                Possible options: 
-                    ar de en es fr he it nl no pt ru se ud zh. 
+                The 2-letter ISO-639-1 code of the language you want to get 
+                headlines for. 
+                Possible options: ar de en es fr he it nl no pt ru se ud zh. 
                 Default: all languages returned.
             sort_by:
                 The order to sort the articles in. 
                 Possible options: 
                     relevancy = articles more closely related to q come first.
-                    popularity = articles from popular sources and publishers come first.
+                    popularity = articles from popular sources and publishers 
+                    come first.
                     publishedAt = newest articles come first.
                 Default: publishedAt
         Response:
-            Saves the results under <results_dir> with name query_name-<timestamp>.html". 
+            Saves the results under <results_dir> with name 
+            query_name-<timestamp>.html". 
         """
         try:
             args = self._remove_empty_args(**query_args)
-            # Get query name and append it with timestamp to use it as html/json filename
-            queryname = self._query_name_with_timestamp(args.pop('query_name'))
+            # Get query name and append it with timestamp to use it as 
+            # html/json filename
+            queryname = self._query_name_with_timestamp(
+                args.pop('query_name'))
             # Call get_everything with provided query args
             results = self.query('get_everything', queryname, **args)
-            article_df = self._create_df_from_article_list(results['articles'])
-            return self._save_query_response_html('get_everything', article_df, 
-                                                  results['query'], queryname)
+            article_df = self._create_df_from_article_list(
+                results['articles'])
+            return self._save_query_response_html(
+                'get_everything', article_df, results['query'], queryname)
         except Exception as e:
             self._logger.exception(e)
 
@@ -353,7 +381,7 @@ class NewsApiWrapper:
         category: 
             Find sources that display news of this category. 
             Possible options: 
-            business entertainment general health science sports technology . 
+            business entertainment general health science sports technology. 
             Default: all categories.
         language:
             Find sources that display news in a specific language. 
@@ -363,23 +391,26 @@ class NewsApiWrapper:
         country
             Find sources that display news in a specific country. 
             Possible options: 
-                ae ar at au be bg br ca ch cn co cu cz de eg fr gb gr hk hu id ie il in 
-                it jp kr lt lv ma mx my ng nl no nz ph pl pt ro rs ru sa se sg si sk th 
-                tr tw ua us ve za . 
+                ae ar at au be bg br ca ch cn co cu cz de eg fr gb gr hk hu id
+                ie il in it jp kr lt lv ma mx my ng nl no nz ph pl pt ro rs 
+                ru sa se sg si sk th tr tw ua us ve za . 
             Default: all countries.
 
         Response:
-            Saves the results under <results_dir> with name query_name-<timestamp>.html". 
+            Saves the results under <results_dir> with name 
+            query_name-<timestamp>.html". 
         """
         try:
             args = self._remove_empty_args(**query_args)
-            # Get query name and append it with timestamp to use it as html/json filename
-            queryname = self._query_name_with_timestamp(args.pop('query_name'))
+            # Get query name and append it with timestamp to use it as 
+            # html/json filename
+            queryname = self._query_name_with_timestamp(args.pop(
+                'query_name'))
             # Call get_everything with provided query args
             results = self.query('get_sources', queryname, **args)
             df = self._create_df_from_source_list(results['sources'])
-            return self._save_query_response_html('get_sources', df, results['query'], 
-                                                    queryname)
+            return self._save_query_response_html(
+                'get_sources', df, results['query'], queryname)
         except Exception as e:
             self._logger.exception(e)
 
