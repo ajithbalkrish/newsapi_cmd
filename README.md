@@ -40,8 +40,11 @@ News API Terms of Service can be found in https://newsapi.org/terms.
 Show help message and exit
 
 - -c newsapi_key data_loc, --configure newsapi_key data_loc
+
 Initial setup.
+
 newsapi_key: API key from newsapi.org
+
 data_loc: directory to save query results
 
 - -t input_file, --topnews input_file
