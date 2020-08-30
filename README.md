@@ -39,22 +39,13 @@ News API Terms of Service can be found in https://newsapi.org/terms.
 - -h, --help 
 Show help message and exit
 
-- -c newsapi_key data_loc, --configure newsapi_key data_loc
+- -c newsapi_key data_loc, --configure newsapi_key data_loc ==> Initial setup. newsapi_key: API key from newsapi.org; data_loc: directory to save query results
 
-Initial setup.
+- -t input_file, --topnews input_file ==> Get top news headlines based on the query.
 
-newsapi_key: API key from newsapi.org
+- -a input_file, --allnews input_file ==> Get all news headlinesbased on the query.
 
-data_loc: directory to save query results
-
-- -t input_file, --topnews input_file
-Get top news headlines based on the query.
-
-- -a input_file, --allnews input_file 
-get all news headlinesbased on the query.
-
-- -s input_file, --sources input_file 
-return the available news publishers.
+- -s input_file, --sources input_file ==> Return the available news publishers.
 
 
 Template for input files are in ./newsapi_wrapper/Templates/:
