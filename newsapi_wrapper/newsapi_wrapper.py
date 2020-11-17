@@ -4,6 +4,7 @@ import time
 import os
 import json
 import shutil
+import errno
 import pandas as pd
 from pandas import json_normalize
 from newsapi import NewsApiClient
@@ -15,8 +16,8 @@ pd.options.display.float_format = '{:.2f}'.format
 pd.set_option('display.max_columns', 30)
 pd.set_option('display.max_rows', 100)
 
-TEMPLATE_PATH = "./Templates/"
-DATA_PATH = "./Data/"
+TEMPLATE_PATH = "Templates/"
+DATA_PATH = "Data/"
 HTML_TEMPLATE = "query_result_template.html"
 PAGE_SIZE = 100
 
@@ -33,16 +34,15 @@ class NewsApiWrapper:
             :
         """
         self._logger = logger
-        if not os.path.exists(results_dir):
-            self._logger.exception(
-                "Directory does not exist: {}".format(results_dir))
+        if not os.path.exists(r"{}".format(results_dir)):
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), results_dir)
         self._results_dir = results_dir
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        data_dir = dir_path + DATA_PATH.lstrip('.')
+        data_dir = os.path.join(dir_path, DATA_PATH.lstrip('.'))
         if not os.path.exists(data_dir):
-            os.mkdir(data_dir)
+            os.mkdir(data_dir)        
         self._data_dir = data_dir
-        self._template_dir = dir_path + TEMPLATE_PATH.lstrip('.')
+        self._template_dir = os.path.join(dir_path, TEMPLATE_PATH.lstrip('.'))
         self._html_template = HTML_TEMPLATE
         self._pgsize = PAGE_SIZE
         self._logger.debug('results_dir: {}'.format(results_dir))
@@ -138,12 +138,12 @@ class NewsApiWrapper:
     def _save_query_response_html(self, api_name, df, query_data, fname):
         self._logger.debug('_save_query_response_html {}, {}'.format(
                             api_name, fname))
-        dst_css = self._results_dir+'style.css'
+        dst_css = os.path.join(self._results_dir, 'style.css')
         if not os.path.exists(dst_css):
             shutil.copyfile(
                 self._template_dir + 'style_template.css',dst_css)
         try:
-            path = self._results_dir+fname+'.html'
+            path = os.path.join(self._results_dir, fname+'.html')
             query_string = self._build_query_string(query_data)
             html_template = self._read_html_template()
             if  api_name == 'get_sources':

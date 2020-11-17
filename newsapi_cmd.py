@@ -15,13 +15,20 @@ logger = logging.getLogger('newsapiCmd')
 
 def write_env(args):
     fname = '.env'
+    results_dir_name = "Results"
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    results_dir = os.path.join(dir_path, results_dir_name)
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
+        logger.debug('Created results dir: {}'.format(results_dir))      
     try:
         # Can make generic
         with open(fname, "wt") as file:
             file.write('NEWSAPI_KEY=\"{}\"'.format(args[0]))
             file.write('\n')
-            file.write('RESULTS_PATH=\"{}\"'.format(args[1]))
+            file.write('RESULTS_DIR_NAME=\"{}\"'.format(results_dir_name))
             file.write('\n')
+        print('Configured newsapi_cmd.')
     except Exception as e:
         print(e)
 
@@ -31,8 +38,10 @@ def query(action, args):
         load_dotenv()
         with open(args[0], 'r') as file:
             params = yaml.safe_load(file)
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        results_dir = os.path.join(dir_path, os.getenv("RESULTS_DIR_NAME"))
         news = nw.NewsApiWrapper(os.getenv("NEWSAPI_KEY"), 
-                                 os.getenv("RESULTS_PATH"),
+                                 results_dir,
                                  logger=logger)
         if action == 'topnews':
             html_path = news.get_top_headlines_html(**params)
@@ -50,12 +59,12 @@ def query(action, args):
 def check_setup():
     if not os.path.exists('.env'):
         print('Setup is not done.')
-        print('Run => news_feeds.py --configure newsapi_key data_loc')
+        print('Run => news_api.py --configure newsapi_key')
         exit()
     load_dotenv()
     if not os.getenv("NEWSAPI_KEY"):
         print('Setup is not done.')
-        print('Run => news_feeds.py --configure newsapi_key data_loc')
+        print('Run => news_api.py --configure newsapi_key')
         exit()
 
 def main():  
@@ -73,15 +82,14 @@ def main():
     sources_help = "return the available news publishers; template \
         for input file: {}.".format(sources_tmplt)
     
-    config_help = 'newsapi_key: API key from newsapi.org; data_loc: \
-        directory to save query results'
+    config_help = 'newsapi_key: API key from newsapi.org'
 
     # create parser object
     parser = argparse.ArgumentParser(description \
         = "Command line utility to explore news APIs from newsapi.org")
     # defining arguments for parser object 
-    parser.add_argument("-c", "--configure", type=str, nargs=2,
-                        metavar=('newsapi_key','data_loc'),
+    parser.add_argument("-c", "--configure", type=str, nargs=1,
+                        metavar=('newsapi_key'),
                         help=config_help)
     parser.add_argument("-t", "--topnews", type=str, nargs=1,
                         metavar=('input_file'), help=topnews_help)
@@ -96,7 +104,7 @@ def main():
         check_setup()
     # call functions depending on type of argument
     if args.configure != None:
-        write_env(args.setup)
+        write_env(args.configure)
     elif args.topnews != None:
         query('topnews', args.topnews)
     elif args.allnews != None:
